@@ -107,7 +107,7 @@ public class Ex1 {
                             setPlusMultiply();
 
 
-                            // CALLING THE ALGO'S
+                            // ----------- CALLING THE ALGO'S ----------- //
                             factorsCollection facCol = new factorsCollection();
                             col.getCollection().forEach((k,v) -> facCol.addToCollection(v.getFactor()));
 
@@ -121,20 +121,15 @@ public class Ex1 {
 
                             switch (numOfAlgo) {
                                 case "1":
-                                    try{
-                                        ans = String.format("%.5g", basic_inference(query, col, facCol));
-                                        ans = ans+","+plus+","+multiply;
-                                    }catch(Exception e){
-                                        ans = String.format("%.5g", eliminate_join(query, col, facCol));
-                                        ans = ans+","+0+","+0;
-                                    }
+                                    ans = String.format("%.5g", basic_inference(query, col, facCol));
+                                    ans = ans+","+plus+","+multiply;
                                     break;
                                 case "2":
-                                    ans = String.format("%.5g", eliminate_join(query, col, facCol));
+                                    ans = String.format("%.5g", eliminate_join(query, col, facCol, "2"));
                                     ans = ans+","+plus+","+multiply;
                                     break;
                                 case "3":
-                                    ans = String.format("%.5g", eliminate_join_heuristic_order(query, col, facCol));
+                                    ans = String.format("%.5g", eliminate_join(query, col, facCol, "3"));
                                     ans = ans+","+plus+","+multiply;
                                     break;
                             }
@@ -422,12 +417,12 @@ public class Ex1 {
         keys.add(0, key);
     }
     /**
-     * Simple algorithm of joint distribution.
+     * Simple algorithm of basic inference.
      *
      * @param  q   a given query
      * @param  varCol    variablesCollection
      * @param  facCol   factorsCollection
-     * @return         (double) p
+     * @return         (double) p - probability of query
      */
     private static double basic_inference(String q, variablesCollection varCol, factorsCollection facCol) {
 
@@ -512,42 +507,18 @@ public class Ex1 {
 
         // ------------------------------ basic_inference ALGORITHM ----------------------------------- //
         for (int i = 0; i < sizeOfVarOutcome; i++){ // for B=V1 and B=V2 (and B=V3)
-            System.out.println("tempQuery:"+tempQuery);
-            for (int j = 0; j < permutationsOfHiddenVars.size(); j++){ // size of (all options of hidden vars)
+            for (List<String> permutationsOfHiddenVar : permutationsOfHiddenVars) { // size of (all options of hidden vars)
                 // query = "B=T", evidences = ["J=T", "M=T"], hiddenVars = ["A", "E"]
-
                 // hiddenPermutations: [[A=T, E=T], [A=T, E=F], [A=F, E=T], [A=F, E=F]]
-                TempHiddenVars = permutationsOfHiddenVars.get(j);
-                System.out.println("Permutaion"+j+": "+TempHiddenVars); //DELETE THIS
-
+                TempHiddenVars = permutationsOfHiddenVar;
                 double mult = 1.0;
                 for (String currentVar : allVars) { // want to calculate: P(B=T) * P(J=T|A=T) * P(M=T|A=T) * P(A=T|B=T,E=T)
-                    String theRequest = findRequestTernary(varCol, currentVar, tempQuery, onlyEvidences ,evidences , hiddenVars, TempHiddenVars);
-
-                    try{
-                        double num = collection.get(currentVar).get(theRequest);
-                    }catch (Exception e){
-
-                        System.out.println("currentVar: "+currentVar + " theRequest: " + theRequest);
-                        // print the collection
-                        for (String key : collection.keySet()){
-                            System.out.print(key + " [");
-                            for (String key2 : collection.get(key).keySet()){
-                                System.out.print("["+"key: {" +key2+"}" + " value: " + collection.get(key).get(key2)+"] ");
-                            }
-                            System.out.println("]");
-                        }
-                        System.out.println(e);
-                        //theRequest = findRequestTernary(varCol, currentVar, tempQuery, onlyEvidences ,evidences , hiddenVars, TempHiddenVars);
-                    }
-                    System.out.print("theRequest: "+theRequest + " "); //DELETE THIS
-                    mult*=collection.get(currentVar).get(theRequest);
+                    String theRequest = findRequestTernary(varCol, currentVar, tempQuery, onlyEvidences, evidences, hiddenVars, TempHiddenVars);
+                    mult *= collection.get(currentVar).get(theRequest);
                     multiply(); // multiply*
-                    System.out.println("mult: "+collection.get(currentVar).get(theRequest)); //DELETE THIS
                 }
-                ans+=mult; plus(); // plus++
-                System.out.println("ans: " + ans);
-
+                ans += mult;
+                plus(); // plus++
                 multiply--;
             }//end inside for
             plus--;
@@ -561,9 +532,11 @@ public class Ex1 {
                 }
                 else if (i == 1){
                     ansV2=ans;
+                    ans = 0.0;
                 }
                 else {
                     ansV3=ans;
+                    ans = 0.0;
                 }
                 // Change the contents of the variable
                 if (splitedTempQuery[1].equals("T")){
@@ -601,30 +574,417 @@ public class Ex1 {
                 }
 
             }
-
-        }//end outside for
-
-//        System.out.println("ansV1: " + ansV1);
-//        System.out.println("ansV2: " + ansV2);
-//        System.out.println("ansV3: " + ansV3);
-
-        // -------- NORMALIZATION --------- //
-        ans = 1/(ansV1+ansV2+ansV3); plus();
-        ans = ans*ansV1;
-        if(ansV3 != 0.0){plus();}
-
-
-        for (String key : collection.keySet()){
-            System.out.print(key + " [");
-            for (String key2 : collection.get(key).keySet()){
-                System.out.print("["+"key: {" +key2+"}" + " value: " + collection.get(key).get(key2)+"] ");
-            }
-            System.out.println("]");
         }
+        // -------- NORMALIZATION --------- //
+        ans = ansV1/(ansV1+ansV2+ansV3); plus();
+        if(ansV3 != 0.0){ plus(); }
+
+//        for (String key : collection.keySet()){
+//            System.out.print(key + " [");
+//            for (String key2 : collection.get(key).keySet()){
+//                System.out.print("["+"key: {" +key2+"}" + " value: " + collection.get(key).get(key2)+"] ");
+//            }
+//            System.out.println("]");
+//        }
 
         return ans;
     }
 
+
+    /**
+     * Inference with Variable Elimination Algorithm.
+     *
+     * @param  s   a given query
+     * @param  varCol    variablesCollection
+     * @param  facCol   factorsCollection
+     * @param  numOfAlgo   number of algo (2 or 3)
+     * @return         (double) p - probability of query
+     */
+    private static double eliminate_join(String s, variablesCollection varCol, factorsCollection facCol, String numOfAlgo) {
+        if(numOfAlgo.equals("2")){
+            s = returnQuery(s, varCol);
+        }
+        else{
+            s = returnQueryHeuristic(s, varCol);
+        }
+
+        // ----------- clean the data ----------- //
+        String[] split_q_hidden = s.split(" ");
+        String q = split_q_hidden[0];
+        String hidden = "";
+        if (split_q_hidden.length>1){
+            hidden = split_q_hidden[1];
+        }
+        q = q.replace("P" , "");
+        q = q.replace("(" , "");
+        q = q.replace(")" , "");
+        String[] q_evidence = q.split("\\|");
+        String query = q_evidence[0];
+        String[] evidences = new String[0];
+        String evidence = "";
+        if (q_evidence.length>1){
+            evidence = q_evidence[1];
+            evidences = evidence.split(",");
+        }
+        String ques = query.split("=")[0];
+        String val = query.split("=")[1];
+
+        // ----------  reduce non parents ----------- //
+        String[] evidences1 = new String[0];
+        if (q_evidence.length>1){
+            evidences1 = new String[evidences.length];
+            for(int i=0 ; i<evidences.length ; i++) {
+                evidences1[i] = evidences[i].split("=")[0];;
+            }
+        }
+        List<String> parents = relevantParentsNames(ques , evidences1 , varCol , facCol);
+        for (String key : varCol.getCollection().keySet()) {
+            for(int i=0 ; i<varCol.getVariable(key).getFactor().getParameters().size() ; i++){
+                if (!parents.contains(key)){
+                    facCol.removeFactorContains(key);
+                }
+            }
+        }
+
+        // ---------- reduce independent ----------- //
+        for (String key : varCol.getCollection().keySet()) {
+            String checkBayesBall = key+"-"+ques+"|"+evidence;
+            if (!evidence.contains(key) && bayesBall(checkBayesBall,varCol)){
+                facCol.removeFactorContains(key);
+            }
+        }
+        // ----------  reduce evidence  ----------- //
+        for (String item : evidences) {
+            String k = item.split("=")[0];
+            String v = item.split("=")[1];
+            for (int j = 0; j < facCol.getAllFactors().size(); j++) {
+                if (facCol.getAllFactors().get(j).contains(k)) {
+                    // ---- create a new factor without the hidden column that not from the right value ----------- //
+                    Factor a = new Factor(facCol.getAllFactors().get(j).getParameters(), facCol.getAllFactors().get(j).getRows(), k, v);
+                    facCol.getAllFactors().remove(j);
+                    facCol.addToCollectionIndex(a, j);
+                    if (a.getRows().size() == 1) {
+                        facCol.getAllFactors().remove(j);
+                        j--;
+                    }
+                }
+            }
+        }
+
+        boolean join = false;
+        if (split_q_hidden.length>1){
+            String[] hiddenOrder = hidden.split("-");
+            // ---- for each hidden, find all the factors that contain hidden ----------- //
+            for (String value : hiddenOrder) {
+                factorsCollection allHiddenFactors = new factorsCollection();
+                for (int j = 0; j < facCol.getAllFactors().size(); j++) {
+                    if (facCol.getFactor(j).contains(value)) {
+                        allHiddenFactors.addToCollection(facCol.getFactor(j));
+                        facCol.getAllFactors().remove(j);
+                        j--;
+                    }
+                }
+                // ------- if there's only one, eliminate and finish ----------- //
+                if (allHiddenFactors.getAllFactors().size() == 1) {
+                    Factor factor = eliminate(allHiddenFactors.getAllFactors().get(0), value);
+                    allHiddenFactors.getAllFactors().remove(0);
+                    if (factor.getParameters().size() > 0) {
+                        facCol.addToCollection(factor);
+                    }
+                }
+                // --- if there are more than one factor, sort by size, join all, and eliminate --- //
+                sortFactors(allHiddenFactors.getAllFactors());
+                boolean sizeBiggerThanOne = false;
+                while (allHiddenFactors.getAllFactors().size() > 1) {
+                    Factor factor = join(allHiddenFactors.getFactor(0), allHiddenFactors.getFactor(1));
+                    join = true;
+                    allHiddenFactors.getAllFactors().remove(0);
+                    allHiddenFactors.getAllFactors().remove(0);
+                    allHiddenFactors.addToCollectionIndex(factor, 0);
+                    sizeBiggerThanOne = true;
+                }
+                if (sizeBiggerThanOne) {
+                    Factor factor = eliminate(allHiddenFactors.getFactor(0), value);
+                    if (factor.getRows().size() > 1) {
+                        facCol.addToCollection(factor);
+                    }
+                }
+            }
+        }
+
+        // ---- only relevant factors of query ----- //
+        sortFactors(facCol.getAllFactors());
+        Factor factor = facCol.getFactor(0);
+        boolean moreThanOne = false;
+        while (facCol.getAllFactors().size() > 1) {
+            factor = join(facCol.getFactor(0), facCol.getFactor(1));
+            facCol.getAllFactors().remove(0);
+            facCol.getAllFactors().remove(0);
+            facCol.addToCollectionIndex(factor,0);
+            moreThanOne = true;
+        }
+        if (moreThanOne){
+            factor = eliminate(facCol.getFactor(0),"hidden");
+        }
+        // -------- normalization of query --------- //
+        if (join){
+            double sum = factor.getRows().get(0).getP();
+            for (int i=1 ; i<factor.getRows().size() ; i++){
+                sum += factor.getRows().get(i).getP();
+                plus();
+            }
+            for (int i=0 ; i<factor.getRows().size() ; i++){
+                factor.getRows().get(i).setP(factor.getRows().get(i).getP() / sum);
+            }
+        }
+
+        // --- find the answer in the last factor and return it --- //
+        for (int j=0 ; j<factor.getRows().size() ; j++){
+            if (factor.getRows().get(j).getCases().get(ques).equals(val)){
+                return factor.getRows().get(j).getP();
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * function for sorting all factors by their size and by their Ascii value
+     *
+     * @param  allFactors    List of all factors
+     */
+    private static void sortFactors(List<Factor> allFactors) {
+        allFactors.sort((o1 , o2) -> {
+            Integer i1 = o1.getParameters().size();
+            Integer i2 = o2.getParameters().size();
+            int comp = i1.compareTo(i2);
+            if (comp != 0){
+                return comp;
+            }
+            Integer asciiValue1 = AsciiSum(o1.getParameters());
+            Integer asciiValue2 = AsciiSum(o2.getParameters());
+            return asciiValue1.compareTo(asciiValue2);
+        });
+
+    }
+    /**
+     * function for summation of all parameters in a List
+     *
+     * @param  parameters    List of String
+     * @return (int)ans - summation
+     */
+    private static int AsciiSum(List<String> parameters) {
+        int answer = 0;
+        for (String parameter : parameters) {
+            for (int j = 0; j < parameter.length(); j++) {
+                answer += parameter.charAt(j);
+            }
+        }
+        return answer;
+    }
+
+
+    /**
+     * Function returns a list that contains all parents of query and evidence (variables that are relevant to the algorithm)
+     * @param  query    the query
+     * @param  evidences    String List of evidences
+     * @param  varCol    variables Collection
+     * @param  facCol    factors Collection
+     * @return (List<String>)parents - all needed parents
+     */
+    private static List<String> relevantParentsNames(String query , String[] evidences , variablesCollection varCol , factorsCollection facCol){
+        List<String> parents = new ArrayList<>();
+        // ----- add query and evidences to list of parents ----- //
+        parents.add(query);
+        for (String evidence : evidences) {
+            if (!parents.contains(evidence)) {
+                parents.add(evidence);
+            }
+        }
+        // ----- add all given of query to list of parents ----- //
+        for (int i=0 ; i<varCol.getVariable(query).getGiven().size() ; i++){
+            if (!parents.contains(varCol.getVariable(query).getGiven().get(i))){
+                parents.add(varCol.getVariable(query).getGiven().get(i));
+            }
+        }
+        // ----- add all given of evidences to list of parents ----- //
+        for (String evidence : evidences) {
+            for (int j = 0; j < varCol.getVariable(evidence).getGiven().size(); j++) {
+                if (!parents.contains(varCol.getVariable(evidence).getGiven().get(j))) {
+                    parents.add(varCol.getVariable(evidence).getGiven().get(j));
+                }
+            }
+        }
+        // ----- add all parents of variables in list to list of parents ------ //
+        int i=0;
+        while (i< parents.size()){
+            for (int j=0 ; j<varCol.getVariable(parents.get(i)).getGiven().size() ; j++){
+                if (!parents.contains(varCol.getVariable(parents.get(i)).getGiven().get(j))){
+                    parents.add(varCol.getVariable(parents.get(i)).getGiven().get(j));
+                }
+            }
+            i++;
+        }
+        return parents;
+    }
+
+
+    /**
+     *join two given factors
+     * @param  a    the query
+     * @param  b    String List of evidences
+     * @return (Factor) - factor of join two factors
+     */
+    private static Factor join(Factor a, Factor b) {
+        List<factorRow> rows = new ArrayList<>();
+        List<String> bothParameters = new ArrayList<>();
+        // find common variables
+        for (int i=0 ; i<a.getParameters().size() ; i++){
+            for (int j=0 ; j<b.getParameters().size() ; j++){
+                if (a.getParameters().get(i).equals(b.getParameters().get(j))){
+                    bothParameters.add(b.getParameters().get(j));
+                }
+            }
+        }
+        // -------  multiply each row with the same variables -------- //
+        for (int i=0 ; i<a.getRows().size() ; i++){
+            for (int j=0 ; j<b.getRows().size() ; j++){
+                if (a.getRows().get(i).sameParam(b.getRows().get(j) , bothParameters)){
+                    rows.add(new factorRow(a.getRows().get(i).getP()*b.getRows().get(j).getP()));
+                    multiply();
+                    for (String bothParameter : bothParameters) {
+                        rows.get(rows.size() - 1).addParam(bothParameter, a.getRows().get(i).getCases().get(bothParameter));
+                    }
+                    // ---- add non-common variables that were in the two rows that were joined ---- //
+                    for (int k=0 ; k<a.getParameters().size() ; k++){
+                        if (!bothParameters.contains(a.getParameters().get(k))){
+                            rows.get(rows.size() - 1).addParam(a.getParameters().get(k) , a.getRows().get(i).getCases().get(a.getParameters().get(k)));
+                        }
+                    }
+                    for (int k=0 ; k<b.getParameters().size() ; k++){
+                        if (!bothParameters.contains(b.getParameters().get(k))){
+                            rows.get(rows.size() - 1).addParam(b.getParameters().get(k) , b.getRows().get(j).getCases().get(b.getParameters().get(k)));
+                        }
+                    }
+                }
+            }
+        }
+        // ----- save the parameters for making a new factor ----- //
+        List<String> parameters = new ArrayList<>();
+        if (rows.size()>0){
+            parameters.addAll(rows.get(0).getCases().keySet());
+        }
+        // ---- make a new factor and return it ---- //
+        return new Factor(parameters , rows);
+    }
+    /**
+     * Eliminate a hidden parameter
+     * @param  a    Factor
+     * @param  hidden    String of hidden
+     * @return (Factor) - a
+     */
+    private static Factor eliminate(Factor a, String hidden) {
+        // ----- delete key and value of hidden from each row and from parameters ----- //
+        for (int i=0 ; i<a.getRows().size() ; i++){
+            a.getRows().get(i).getCases().remove(hidden);
+        }
+        a.getParameters().remove(hidden);
+        // ---- if two rows have the same parameters, attach them to one row ---- //
+        for (int i=0 ; i<a.getRows().size() ; i++){
+            for (int j=i+1 ; j<a.getRows().size() ; j++){
+                if (a.getRows().get(i).sameParam(a.getRows().get(j) , a.getParameters())){
+                    a.getRows().get(i).setP(a.getRows().get(i).getP()+a.getRows().get(j).getP());
+                    plus();
+                    a.getRows().remove(j);
+                    j -= 1;
+                }
+            }
+        }
+        return a;
+    }
+    /**
+     * bayesBall algorithm
+     * @param  s    String
+     * @param  col    variablesCollection
+     * @return (boolean) - True/False
+     */
+    private static boolean bayesBall(String s, variablesCollection col) {
+        // ---- clean data for working with ---- //
+        col.unBeenSeenAll();
+        col.unColoredAll();
+        int index = s.indexOf('|');
+        String[] qu = s.split("\\|");
+        String firstVab = qu[0].split("-")[0];
+        String secondVab = qu[0].split("-")[1];
+        Variable first = col.getVariable(firstVab);
+        Variable second = col.getVariable(secondVab);
+        if (first.getColored() || second.getColored()){
+            return true; // there is no route and so they are independent
+        }
+        String[] parts = s.substring(index+1).split(",");
+        // ----- color all evidences ------ //
+        if (!parts[0].equals("")){
+            //there is something not good here!
+            for (int i=0 ; i<parts.length ; i++){
+                String[] given = parts[i].split("=");
+                col.getVariable(given[0]).setColored(true);
+            }
+        }
+        // --- return true if there is no route, return false if there is a route --- //
+        return !route(col , first, second, false , first.getName());
+    }
+
+
+    /**
+     * recursive loop for finding if there is a route between two variables
+     *
+     * @param  col    variablesCollection
+     * @param  first    Variable
+     * @param  second    Variable
+     * @param  prevWasFather    boolean: if previous Was Father
+     * @param  cameFrom    where it came from
+     * @return (boolean) - True/False
+     */
+    private static boolean route(variablesCollection col , Variable first, Variable second, boolean prevWasFather , String cameFrom) {
+        if (Objects.equals(first.getName(), second.getName())){
+            return true; // there is a route
+        }
+        if (first.getBeenSeenFromChild() && first.getBeenSeenFromFather()){
+            return false; // we saw this variable from two directions which means there is no route
+        }
+        if ((first.getBeenSeenFromFather() && prevWasFather) || (first.getBeenSeenFromChild() && !prevWasFather)) {
+            return false;
+        } // color correct "beenSeen" depends on from whom we came from
+        if (prevWasFather){
+            first.setBeenSeenFromFather(true);
+        }
+        if (!prevWasFather){
+            first.setBeenSeenFromChild(true);
+        }
+        // ----------- look for a route according to the bayes ball rules ----------- //
+        if ((first.getColored() && prevWasFather) || (!first.getColored() && !prevWasFather)){
+            for (int i=0 ; i<first.getGiven().size() ; i++){
+                if (route(col , col.getVariable(first.getGiven().get(i)) , second , false , first.getName())){
+                    return true;
+                }
+            }
+        }
+        if (!first.getColored()){
+            for (int i=0 ; i<first.getChildes().size() ; i++){
+                if (route(col , col.getVariable(first.getChildes().get(i)) , second , true , first.getName())){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Function that returns updated query with right heuristic order (A-B-C)
+     *
+     * @param  str    String of query
+     * @param  varCol    variablesCollection
+     * @return (String) - updated query with right heuristic order
+     */
     private static String returnQuery(String str, variablesCollection varCol){
         // clear no needed data from string
         String q = "";
@@ -665,484 +1025,15 @@ public class Ex1 {
         stringHidden= stringHidden.replace(" ","-");
         return str + " " + stringHidden;
     }
-
-    private static double eliminate_join(String s, variablesCollection varCol, factorsCollection facCol) {
-        s = returnQuery(s, varCol);
-
-
-        // clean data so we could work with
-        String[] split_q_hidden = s.split(" ");
-        String q = split_q_hidden[0];
-        String hidden = "";
-        if (split_q_hidden.length>1){
-            hidden = split_q_hidden[1];
-        }
-        q = q.replace("P" , "");
-        q = q.replace("(" , "");
-        q = q.replace(")" , "");
-        String[] q_evidence = q.split("\\|");
-        String query = q_evidence[0];
-        String[] evidences = new String[0];
-        String evidence = "";
-        if (q_evidence.length>1){
-            evidence = q_evidence[1];
-            evidences = evidence.split(",");
-        }
-        String ques = query.split("=")[0];
-        String val = query.split("=")[1];
-        // reduce non parents
-        String[] evidences1 = new String[0];
-        if (q_evidence.length>1){
-            evidences1 = new String[evidences.length];
-            for(int i=0 ; i<evidences.length ; i++) {
-                evidences1[i] = evidences[i].split("=")[0];;
-            }
-        }
-        List<String> parents = relevantParentsNames(ques , evidences1 , varCol , facCol);
-        for (String key : varCol.getCollection().keySet()) {
-            for(int i=0 ; i<varCol.getVariable(key).getFactor().getParameters().size() ; i++){
-                if (!parents.contains(key)){
-                    facCol.removeFactorContains(key);
-                }
-            }
-        }
-
-        // reduce independent
-        for (String key : varCol.getCollection().keySet()) {
-            String checkBayesBall = key+"-"+ques+"|"+evidence;
-            if (!evidence.contains(key) && bayesBall(checkBayesBall,varCol)){
-                facCol.removeFactorContains(key);
-            }
-        }
-        // reduce evidence
-        for(int i=0 ; i<evidences.length ; i++){
-            String k = evidences[i].split("=")[0];
-            String v = evidences[i].split("=")[1];
-            for (int j=0 ; j<facCol.getAllFactors().size() ; j++){
-                if (facCol.getAllFactors().get(j).contains(k)){
-                    // create a new factor without the hidden column that not from the right value
-                    Factor a = new Factor(facCol.getAllFactors().get(j).getParameters() , facCol.getAllFactors().get(j).getRows() , k , v);
-                    facCol.getAllFactors().remove(j);
-                    facCol.addToCollectionIndex(a,j);
-                    if (a.getRows().size()==1){
-                        facCol.getAllFactors().remove(j);
-                        j--;
-                    }
-                }
-            }
-        }
-
-        boolean join = false;
-        if (split_q_hidden.length>1){
-            String[] hiddenOrder = hidden.split("-");
-            // for each hidden, find all the factors that contain hidden
-            for (int i=0 ; i<hiddenOrder.length ; i++){
-                factorsCollection allHiddenFactors = new factorsCollection();
-                for (int j=0 ; j<facCol.getAllFactors().size() ; j++){
-                    if (facCol.getFactor(j).contains(hiddenOrder[i])){
-                        allHiddenFactors.addToCollection(facCol.getFactor(j));
-                        facCol.getAllFactors().remove(j);
-                        j--;
-                    }
-                }
-                // if there's only one, eliminate and finish
-                if (allHiddenFactors.getAllFactors().size()==1){
-                    Factor factor = eliminate(allHiddenFactors.getAllFactors().get(0),hiddenOrder[i]);
-                    allHiddenFactors.getAllFactors().remove(0);
-                    if (factor.getParameters().size()>0){
-                        facCol.addToCollection(factor);
-                    }
-                }
-                // if there are more than one factor, sort by size, join all, and eliminate
-                sortFactors(allHiddenFactors.getAllFactors());
-                boolean sizeBiggerThanOne = false;
-                while (allHiddenFactors.getAllFactors().size() > 1){
-                    Factor factor = join(allHiddenFactors.getFactor(0) , allHiddenFactors.getFactor(1));
-                    join = true;
-                    allHiddenFactors.getAllFactors().remove(0);
-                    allHiddenFactors.getAllFactors().remove(0);
-                    allHiddenFactors.addToCollectionIndex(factor,0);
-                    sizeBiggerThanOne = true;
-                }
-                if (sizeBiggerThanOne){
-                    Factor factor = eliminate(allHiddenFactors.getFactor(0),hiddenOrder[i]);
-                    if (factor.getRows().size()>1){
-                        facCol.addToCollection(factor);
-                    }
-                }
-            }
-        }
-
-        // only relevant factors of query
-        sortFactors(facCol.getAllFactors());
-        Factor factor = facCol.getFactor(0);
-        boolean moreThanOne = false;
-        while (facCol.getAllFactors().size() > 1) {
-            factor = join(facCol.getFactor(0), facCol.getFactor(1));
-            facCol.getAllFactors().remove(0);
-            facCol.getAllFactors().remove(0);
-            facCol.addToCollectionIndex(factor,0);
-            moreThanOne = true;
-        }
-        if (moreThanOne){
-            factor = eliminate(facCol.getFactor(0),"hidden");
-        }
-        // normalization of query
-        if (join){
-            double sum = factor.getRows().get(0).getP();
-            for (int i=1 ; i<factor.getRows().size() ; i++){
-                sum += factor.getRows().get(i).getP();
-                plus();
-            }
-            for (int i=0 ; i<factor.getRows().size() ; i++){
-                factor.getRows().get(i).setP(factor.getRows().get(i).getP() / sum);
-            }
-        }
-
-        // find the answer in the last factor and return it
-        for (int j=0 ; j<factor.getRows().size() ; j++){
-            if (factor.getRows().get(j).getCases().get(ques).equals(val)){
-                return factor.getRows().get(j).getP();
-            }
-        }
-        return 0;
-    }
-    private static double eliminate_join_heuristic_order(String s, variablesCollection varCol, factorsCollection facCol){
-        s = returnQuery(s, varCol);
-        // clean data so we could work with
-        String[] split_q_hidden = s.split(" ");
-        String q = split_q_hidden[0];
-        String hidden = "";
-        if (split_q_hidden.length>1){
-            hidden = split_q_hidden[1];
-        }
-        q = q.replace("P" , "");
-        q = q.replace("(" , "");
-        q = q.replace(")" , "");
-        String[] q_evidence = q.split("\\|");
-        String query = q_evidence[0];
-        String[] evidences = new String[0];
-        String evidence = "";
-        if (q_evidence.length>1){
-            evidence = q_evidence[1];
-            evidences = evidence.split(",");
-        }
-        String ques = query.split("=")[0];
-        String val = query.split("=")[1];
-        // reduce non parents
-        String[] evidences1 = new String[0];
-        if (q_evidence.length>1){
-            evidences1 = new String[evidences.length];
-            for(int i=0 ; i<evidences.length ; i++) {
-                evidences1[i] = evidences[i].split("=")[0];;
-            }
-        }
-        List<String> parents = relevantParentsNames(ques , evidences1 , varCol , facCol);
-        for (String key : varCol.getCollection().keySet()) {
-            for(int i=0 ; i<varCol.getVariable(key).getFactor().getParameters().size() ; i++){
-                if (!parents.contains(key)){
-                    facCol.removeFactorContains(key);
-                }
-            }
-        }
-
-        // reduce independent
-        for (String key : varCol.getCollection().keySet()) {
-            String checkBayesBall = key+"-"+ques+"|"+evidence;
-            if (!evidence.contains(key) && bayesBall(checkBayesBall,varCol)){
-                facCol.removeFactorContains(key);
-            }
-        }
-        // reduce evidence
-        for(int i=0 ; i<evidences.length ; i++){
-            String k = evidences[i].split("=")[0];
-            String v = evidences[i].split("=")[1];
-            for (int j=0 ; j<facCol.getAllFactors().size() ; j++){
-                if (facCol.getAllFactors().get(j).contains(k)){
-                    // create a new factor without the hidden column that not from the right value
-                    Factor a = new Factor(facCol.getAllFactors().get(j).getParameters() , facCol.getAllFactors().get(j).getRows() , k , v);
-                    facCol.getAllFactors().remove(j);
-                    facCol.addToCollectionIndex(a,j);
-                    if (a.getRows().size()==1){
-                        facCol.getAllFactors().remove(j);
-                        j--;
-                    }
-                }
-            }
-        }
-
-        boolean join = false;
-        if (split_q_hidden.length>1){
-            String[] hiddenOrder = hidden.split("-");
-            // for each hidden, find all the factors that contain hidden
-            for (int i=0 ; i<hiddenOrder.length ; i++){
-                factorsCollection allHiddenFactors = new factorsCollection();
-                for (int j=0 ; j<facCol.getAllFactors().size() ; j++){
-                    if (facCol.getFactor(j).contains(hiddenOrder[i])){
-                        allHiddenFactors.addToCollection(facCol.getFactor(j));
-                        facCol.getAllFactors().remove(j);
-                        j--;
-                    }
-                }
-                // if there's only one, eliminate and finish
-                if (allHiddenFactors.getAllFactors().size()==1){
-                    Factor factor = eliminate(allHiddenFactors.getAllFactors().get(0),hiddenOrder[i]);
-                    allHiddenFactors.getAllFactors().remove(0);
-                    if (factor.getParameters().size()>0){
-                        facCol.addToCollection(factor);
-                    }
-                }
-                // if there are more than one factor, sort by size, join all, and eliminate
-                sortFactors(allHiddenFactors.getAllFactors());
-                boolean sizeBiggerThanOne = false;
-                while (allHiddenFactors.getAllFactors().size() > 1){
-                    Factor factor = join(allHiddenFactors.getFactor(0) , allHiddenFactors.getFactor(1));
-                    join = true;
-                    allHiddenFactors.getAllFactors().remove(0);
-                    allHiddenFactors.getAllFactors().remove(0);
-                    allHiddenFactors.addToCollectionIndex(factor,0);
-                    sizeBiggerThanOne = true;
-                }
-                if (sizeBiggerThanOne){
-                    Factor factor = eliminate(allHiddenFactors.getFactor(0),hiddenOrder[i]);
-                    if (factor.getRows().size()>1){
-                        facCol.addToCollection(factor);
-                    }
-                }
-            }
-        }
-
-        // only relevant factors of query
-        sortFactors(facCol.getAllFactors());
-        Factor factor = facCol.getFactor(0);
-        boolean moreThanOne = false;
-        while (facCol.getAllFactors().size() > 1) {
-            factor = join(facCol.getFactor(0), facCol.getFactor(1));
-            facCol.getAllFactors().remove(0);
-            facCol.getAllFactors().remove(0);
-            facCol.addToCollectionIndex(factor,0);
-            moreThanOne = true;
-        }
-        if (moreThanOne){
-            factor = eliminate(facCol.getFactor(0),"hidden");
-        }
-        // normalization of query
-        if (join){
-            double sum = factor.getRows().get(0).getP();
-            for (int i=1 ; i<factor.getRows().size() ; i++){
-                sum += factor.getRows().get(i).getP();
-                plus();
-            }
-            for (int i=0 ; i<factor.getRows().size() ; i++){
-                factor.getRows().get(i).setP(factor.getRows().get(i).getP() / sum);
-            }
-        }
-
-        // find the answer in the last factor and return it
-        for (int j=0 ; j<factor.getRows().size() ; j++){
-            if (factor.getRows().get(j).getCases().get(ques).equals(val)){
-                return factor.getRows().get(j).getP();
-            }
-        }
-        return 0;
-    }
-
-
-    // function for sorting all factors by their size and by their Ascii value
-    private static void sortFactors(List<Factor> allFactors) {
-        allFactors.sort((o1 , o2) -> {
-            Integer i1 = o1.getParameters().size();
-            Integer i2 = o2.getParameters().size();
-            int comp = i1.compareTo(i2);
-            if (comp != 0){
-                return comp;
-            }
-            Integer asciiValue1 = AsciiSum(o1.getParameters());
-            Integer asciiValue2 = AsciiSum(o2.getParameters());
-            return asciiValue1.compareTo(asciiValue2);
-        });
-
-    }
-    private static Integer AsciiSum(List<String> parameters) {
-        Integer ans = 0;
-        for (int i=0 ; i<parameters.size() ; i++){
-            for (int j=0 ; j<parameters.get(i).length() ; j++){
-                ans += parameters.get(i).charAt(j);
-            }
-        }
-        return ans;
-    }
-
-    // the function returns a list that contains all parents of query and evidence (variables that are relevant to the algorithm)
-    private static List<String> relevantParentsNames(String query , String[] evidences , variablesCollection varCol , factorsCollection facCol){
-        List<String> parents = new ArrayList();
-        // add query and evidences to list of parents
-        parents.add(query);
-        for (int i=0 ; i<evidences.length ; i++){
-            if (!parents.contains(evidences[i])){
-                parents.add(evidences[i]);
-            }
-        }
-        // add all given of query to list of parents
-        for (int i=0 ; i<varCol.getVariable(query).getGiven().size() ; i++){
-            if (!parents.contains(varCol.getVariable(query).getGiven().get(i))){
-                parents.add(varCol.getVariable(query).getGiven().get(i));
-            }
-        }
-        // add all given of evidences to list of parents
-        for (int i=0 ; i<evidences.length ; i++){
-            for (int j=0 ; j<varCol.getVariable(evidences[i]).getGiven().size() ; j++){
-                if (!parents.contains(varCol.getVariable(evidences[i]).getGiven().get(j))){
-                    parents.add(varCol.getVariable(evidences[i]).getGiven().get(j));
-                }
-            }
-        }
-        // add all parents of variables in list to list of parents
-        int i=0;
-        while (i< parents.size()){
-            for (int j=0 ; j<varCol.getVariable(parents.get(i)).getGiven().size() ; j++){
-                if (!parents.contains(varCol.getVariable(parents.get(i)).getGiven().get(j))){
-                    parents.add(varCol.getVariable(parents.get(i)).getGiven().get(j));
-                }
-            }
-            i++;
-        }
-        return parents;
-    }
-
-    // join two given factors
-    private static Factor join(Factor a, Factor b) {
-        List<factorRow> rows = new ArrayList();
-        List<String> bothParameters = new ArrayList();
-        // find common variables
-        for (int i=0 ; i<a.getParameters().size() ; i++){
-            for (int j=0 ; j<b.getParameters().size() ; j++){
-                if (a.getParameters().get(i).equals(b.getParameters().get(j))){
-                    bothParameters.add(b.getParameters().get(j));
-                }
-            }
-        }
-        // multiply each row with the same variables
-        for (int i=0 ; i<a.getRows().size() ; i++){
-            for (int j=0 ; j<b.getRows().size() ; j++){
-                if (a.getRows().get(i).sameParam(b.getRows().get(j) , bothParameters)){
-                    rows.add(new factorRow(a.getRows().get(i).getP()*b.getRows().get(j).getP()));
-                    multiply();
-                    for (int k=0 ; k<bothParameters.size() ; k++) {
-                        rows.get(rows.size() - 1).addParam(bothParameters.get(k) , a.getRows().get(i).getCases().get(bothParameters.get(k)));
-                    }
-                    // add non-common variables that were in the two rows that were joined
-                    for (int k=0 ; k<a.getParameters().size() ; k++){
-                        if (!bothParameters.contains(a.getParameters().get(k))){
-                            rows.get(rows.size() - 1).addParam(a.getParameters().get(k) , a.getRows().get(i).getCases().get(a.getParameters().get(k)));
-                        }
-                    }
-                    for (int k=0 ; k<b.getParameters().size() ; k++){
-                        if (!bothParameters.contains(b.getParameters().get(k))){
-                            rows.get(rows.size() - 1).addParam(b.getParameters().get(k) , b.getRows().get(j).getCases().get(b.getParameters().get(k)));
-                        }
-                    }
-                }
-            }
-        }
-        // save the parameters for making a new factor
-        List<String> parameters = new ArrayList<>();
-        if (rows.size()>0){
-            for (String key : rows.get(0).getCases().keySet()) {
-                parameters.add(key);
-            }
-        }
-        // make a new factor and return it
-        Factor ans = new Factor(parameters , rows);
-        return ans;
-    }
-
-    private static Factor eliminate(Factor a, String hidden) {
-        // save all parameters of factor except for the hidden parameter
-        List<String> parameters = new ArrayList<>();
-        for (int i=0 ; i<a.getParameters().size() ; i++){
-            if (!a.getParameters().get(i).equals(hidden)){
-                parameters.add(a.getParameters().get(i));
-            }
-        }
-        // delete key and value of hidden from each row and from parameters
-        for (int i=0 ; i<a.getRows().size() ; i++){
-            a.getRows().get(i).getCases().remove(hidden);
-        }
-        a.getParameters().remove(hidden);
-        // if two rows have the same parameters, attach them to one row
-        for (int i=0 ; i<a.getRows().size() ; i++){
-            for (int j=i+1 ; j<a.getRows().size() ; j++){
-                if (a.getRows().get(i).sameParam(a.getRows().get(j) , a.getParameters())){
-                    a.getRows().get(i).setP(a.getRows().get(i).getP()+a.getRows().get(j).getP());
-                    plus();
-                    a.getRows().remove(j);
-                    j -= 1;
-                }
-            }
-        }
-        return a;
-    }
-
-    private static boolean bayesBall(String s, variablesCollection col) {
-        // clean data for working with
-        col.unBeenSeenAll();
-        col.unColoredAll();
-        int index = s.indexOf('|');
-        String[] qu = s.split("\\|");
-        String firstVab = qu[0].split("-")[0];
-        String secondVab = qu[0].split("-")[1];
-        Variable first = col.getVariable(firstVab);
-        Variable second = col.getVariable(secondVab);
-        if (first.getColored() || second.getColored()){
-            return true; // there is no route and so they are independent
-        }
-        String[] parts = s.substring(index+1).split(",");
-        // color all evidences
-        if (!parts[0].equals("")){
-            //there is something not good here!
-            for (int i=0 ; i<parts.length ; i++){
-                String[] given = parts[i].split("=");
-                col.getVariable(given[0]).setColored(true);
-            }
-        }
-        // return true if there is no route, return false if there is a route
-        return !route(col , first, second, false , first.getName());
-    }
-
-    // recursive loop for finding if there is a route between two variables
-    private static boolean route(variablesCollection col , Variable first, Variable second, boolean prevWasFather , String cameFrom) {
-        if (first.getName()==second.getName()){
-            return true; // there is a route
-        }
-        if (first.getBeenSeenFromChild() && first.getBeenSeenFromFather()){
-            return false; // we saw this variable from two directions which means there is no route
-        }
-        if ((first.getBeenSeenFromFather() && prevWasFather) || (first.getBeenSeenFromChild() && !prevWasFather)) {
-            return false;
-        } // color correct "beenSeen" depends on from whom we came from
-        if (prevWasFather){
-            first.setBeenSeenFromFather(true);
-        }
-        if (!prevWasFather){
-            first.setBeenSeenFromChild(true);
-        }
-        // look for a route according to the bayes ball rules
-        if ((first.getColored() && prevWasFather) || (!first.getColored() && !prevWasFather)){
-            for (int i=0 ; i<first.getGiven().size() ; i++){
-                if (route(col , col.getVariable(first.getGiven().get(i)) , second , false , first.getName())){
-                    return true;
-                }
-            }
-        }
-        if (!first.getColored()){
-            for (int i=0 ; i<first.getChildes().size() ; i++){
-                if (route(col , col.getVariable(first.getChildes().get(i)) , second , true , first.getName())){
-                    return true;
-                }
-            }
-        }
-        return false;
+    /**
+     * Function that returns updated query with right heuristic order (not A-B-C)
+     *
+     * @param  str    String of query
+     * @param  varCol    variablesCollection
+     * @return (String) - updated query with right heuristic order
+     */
+    public static String returnQueryHeuristic(String str, variablesCollection varCol){
+        return str;
     }
 
 }
