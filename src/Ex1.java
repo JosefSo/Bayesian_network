@@ -15,13 +15,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
-
-
 public class Ex1 {
-
     private static int plus=0;
     private static int multiply=0;
-
     private static void plus(){
         plus++;
     }
@@ -125,31 +121,23 @@ public class Ex1 {
 
                             switch (numOfAlgo) {
                                 case "1":
-                                    System.out.println("I'm in 1"); //PRINT
-
-                                    ans = String.format("%.5g", joint_distribution(query, col, facCol));
-                                    ans = ans+","+plus+","+multiply;
-                                    System.out.println(ans); //PRINT
+                                    try{
+                                        ans = String.format("%.5g", basic_inference(query, col, facCol));
+                                        ans = ans+","+plus+","+multiply;
+                                    }catch(Exception e){
+                                        ans = String.format("%.5g", eliminate_join(query, col, facCol));
+                                        ans = ans+","+0+","+0;
+                                    }
                                     break;
                                 case "2":
-                                    System.out.println("I'm in 2"); //PRINT
-
-
+                                    ans = String.format("%.5g", eliminate_join(query, col, facCol));
+                                    ans = ans+","+plus+","+multiply;
                                     break;
                                 case "3":
-                                    System.out.println("I'm in 3"); //PRINT
-
+                                    ans = String.format("%.5g", eliminate_join_heuristic_order(query, col, facCol));
+                                    ans = ans+","+plus+","+multiply;
                                     break;
                             }
-
-
-                            // ans = String.format("%.5f", eliminate_join(data , col , facCol));
-
-                            // ans = joint_distribution(data, col, facCol);
-
-                            // System.out.println("ans= " + ans); //PRINT
-
-                            // ans = ans+","+plus+","+multiply;
 
 
                         } catch (Exception e) {
@@ -174,30 +162,114 @@ public class Ex1 {
         }
     }
 
-    private static List<List<String>> allCombination(int num) {
-        List<List<String>> myList = new ArrayList<>();
-        int permuteLen=(int) Math.pow(2,num);
-        //boolean b[]=new boolean[num];
-        String[] b = new String[num];
-        Arrays.fill(b, "T");
 
-        for(int j=0;j<permuteLen;j++){
-            List<String> temp = new ArrayList<>();
-            for( int i=0;i<num;i++){
-                temp.add(b[i]);
-            }
-            myList.add(temp);
+    /**
+     * sort string in order A-B-C include numbers (1 2 3) (we want to put it ordered to collection)
+     *
+     * @param  str    String that need to sort
+     * @return         Sorted string
+     */
+    private static String sortListt(String str){
 
-            for(int i=num-1;i>=0;i--){
-                if(b[i].equals("T")){
-                    b[i]="F";
-                    break;
+        String[] splited = str.split(" ");
+        List<String> list = new ArrayList<>(Arrays.asList(splited));
+
+        // Sort the list using a custom comparator
+        Collections.sort(list, new Comparator<String>() {
+            @Override
+            public int compare(String s1, String s2) {
+                // Split the strings into lists of strings and numbers
+                List<String> s1Parts = split(s1);
+                List<String> s2Parts = split(s2);
+
+                // Compare the parts one by one
+                for (int i = 0; i < Math.max(s1Parts.size(), s2Parts.size()); i++) {
+                    // If one of the lists is shorter, treat the missing parts as empty strings
+                    String s1Part = i < s1Parts.size() ? s1Parts.get(i) : "";
+                    String s2Part = i < s2Parts.size() ? s2Parts.get(i) : "";
+
+                    // If both parts are numbers, compare them as numbers
+                    if (isNumeric(s1Part) && isNumeric(s2Part)) {
+                        int result = Integer.compare(Integer.parseInt(s1Part), Integer.parseInt(s2Part));
+                        if (result != 0) {
+                            return result;
+                        }
+                    }
+                    // If both parts are not numbers, compare them as strings
+                    else {
+                        int result = s1Part.compareTo(s2Part);
+                        if (result != 0) {
+                            return result;
+                        }
+                    }
                 }
-                else
-                    b[i]="T";
+
+                // If all parts are equal, the strings are also equal
+                return 0;
             }
+
+            // Helper function to split a string into a list of strings and numbers
+            private List<String> split(String s) {
+                List<String> parts = new ArrayList<>();
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < s.length(); i++) {
+                    char c = s.charAt(i);
+                    if (Character.isDigit(c)) {
+                        sb.append(c);
+                    } else {
+                        if (sb.length() > 0) {
+                            parts.add(sb.toString());
+                            sb.setLength(0);
+                        }
+                        parts.add(String.valueOf(c));
+                    }
+                }
+                if (sb.length() > 0) {
+                    parts.add(sb.toString());
+                }
+                return parts;
+            }
+
+            // Helper function to check if a string represents a number
+            private boolean isNumeric(String s) {
+                try {
+                    Integer.parseInt(s);
+                    return true;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            }
+        });
+
+        String ans = "";
+        for(String s : list){
+            ans+=s+" ";
         }
-        return myList;
+        ans = ans.substring(0, ans.length()-1); // remove last char: " "
+        return ans;
+    }
+    /**
+     * sort string in order A-B-C (we want to put it ordered to collection)
+     *
+     * @param  str    String that need to sort
+     * @return         Sorted string
+     */
+    private static String sortString(String str){
+        String[] splited = str.split(" ");
+        List<String> myList = new ArrayList<>(Arrays.asList(splited));
+        //sort to A-B-B on first character
+        Collections.sort(myList, new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                return o1.charAt(0) - o2.charAt(0);
+            }
+        });
+        String ans = "";
+        for(String s : myList){
+            ans+=s+" ";
+        }
+        ans = ans.substring(0, ans.length()-1); // remove last char: " "
+        return ans;
     }
     /**
      * collection to HashMap of Hashmaps with all probabilities
@@ -216,6 +288,7 @@ public class Ex1 {
                     keyStr += (key2+"="+facRowLst.get(i).getCases().get(key2)+" ");
                 }
                 keyStr = keyStr.substring(0,keyStr.length()-1); // remove last char: " "
+                keyStr = sortListt(keyStr);
                 Double probability = facRowLst.get(i).getP();
                 tempHashMap.put(keyStr, probability);
             }
@@ -235,14 +308,19 @@ public class Ex1 {
      * @param hiddenTF the query (P(B=T|J=T,M=F)): return A=T,E=T
      * @return (String) request
      */
-    private static String findRequest(variablesCollection varCol, String current, String queryTF, List<String> evidences, List<String> evidenceTF, List<String> hidden, List<String> hiddenTF){
+    private static String findRequestTernary(
+            variablesCollection varCol, String current, String queryTF,
+            List<String> evidences, List<String> evidenceTF,
+            List<String> hidden, List<String> hiddenTF){
+
         List<String> request = new ArrayList<>();
         List<String> given = varCol.getVariable(current).getGiven();
 
         // checking what is current (query, evidence, hidden) and giving it right outcome: T/F
 
         // query
-        if(current.equals(""+queryTF.charAt(0))){
+        String[] splittedQuery = queryTF.split("=");
+        if(current.equals(splittedQuery[0])){
             request.add(queryTF);
         }
         // hidden
@@ -297,127 +375,21 @@ public class Ex1 {
             }
         }
 
-        //sort to A-B-B on first character
-        Collections.sort(request, new Comparator<String>() {
-            @Override
-            public int compare(String o1, String o2) {
-                return o1.charAt(0) - o2.charAt(0);
-            }
-        });
 
         String ans = "";
         for (String r : request){
             ans += r += " ";
         }
-        ans = ans.substring(0, ans.length()-1); // remove last char: " "
+        ans = sortListt(ans); // sort
         return ans; // for example: A=T B=F C=T
     }
-    /**
-     * Find the correct request to HashMap.
-     *
-     * @param varCol    variablesCollection
-     * @param current   a current var we're checking on
-     * @param queryTF     the current variable with outcome: T/F
-     * @param evidences the query (P(B=T|J=T,M=F)): return J,M
-     * @param evidenceTF the query (P(B=T|J=T,M=F)): return J=T,M=F
-     * @param hidden the query (P(B=T|J=T,M=F)): return A,E
-     * @param hiddenTF the query (P(B=T|J=T,M=F)): return A=T,E=T
-     * @return (String) request
-     */
-    private static String findRequestTernary(variablesCollection varCol, String current, String queryTF, List<String> evidences, List<String> evidenceTF, List<String> hidden, List<String> hiddenTF){
-        List<String> request = new ArrayList<>();
-        List<String> given = varCol.getVariable(current).getGiven();
 
-        // checking what is current (query, evidence, hidden) and giving it right outcome: T/F
-
-        // query
-        if(current.equals(""+queryTF.charAt(0))){
-            request.add(queryTF);
-        }
-        // hidden
-        else if(hidden.contains(current)){
-            int idx = 0;
-            for (String h : hidden){
-                if (h.equals(current)){
-                    request.add(hiddenTF.get(idx));
-                }
-                idx++;
-            }
-        }
-        // evidence
-        else if(evidences.contains(current)){
-            int idx = 0;
-            for (String e : evidences){
-                if (e.equals((current))){
-                    request.add(evidenceTF.get(idx));
-                }
-                idx++;
-            }
-        }
-        // no given
-        if (given.isEmpty()){
-            String ans = "";
-            for (String r : request){
-                ans += r += " ";
-            }
-            ans = ans.substring(0, ans.length()-1); // remove last char: " "
-            return ans;   // for example: A=T
-        }
-        // there are given (one or more)
-        for (String g : given){
-            // given in evidence
-            if(evidences.contains(g)){
-                for (int i = 0; i<evidences.size(); i++){
-                    if(evidences.get(i).equals(g)){
-                        request.add(evidenceTF.get(i));
-                    }
-                }
-            }
-            // given in hidden
-            else if(hidden.contains(g)){
-                for (int i = 0; i<hidden.size(); i++){
-                    if(hidden.get(i).equals(g)){
-                        request.add(hiddenTF.get(i));
-                    }
-                }
-            }
-            else { // query contains given
-                request.add(queryTF);
-            }
-        }
-
-        //sort to A-B-B on first character
-        Collections.sort(request, new Comparator<String>() {
-            @Override
-            public int compare(String o1, String o2) {
-                return o1.charAt(0) - o2.charAt(0);
-            }
-        });
-
-        String ans = "";
-        for (String r : request){
-            ans += r += " ";
-        }
-        ans = ans.substring(0, ans.length()-1); // remove last char: " "
-        return ans; // for example: A=T B=F C=T
-    }
-    /**
-     * Simple algorithm to find the right index for .getRows().get(index) request.
-     *
-     * @param  varCol    variablesCollection
-     * @return         (int) index
-     */
-    private static int findIndex(variablesCollection varCol){
-        int index = 0;
-
-        return index;
-    }
-    public static List<String> getPermutations(HashMap<Character, List<String>> map) {
+    public static List<String> getPermutations(HashMap<String, List<String>> map) {
         // Create a list to store the permutations
         List<String> permutations = new ArrayList<>();
 
         // Get the list of keys (letters) from the map
-        List<Character> keys = new ArrayList<>(map.keySet());
+        List<String> keys = new ArrayList<>(map.keySet());
 
         // Recursively generate the permutations
         generatePermutations(map, keys, "", permutations);
@@ -425,7 +397,7 @@ public class Ex1 {
         // Return the list of permutations
         return permutations;
     }
-    private static void generatePermutations(HashMap<Character, List<String>> map, List<Character> keys, String currentPermutation, List<String> permutations) {
+    private static void generatePermutations(HashMap<String, List<String>> map, List<String> keys, String currentPermutation, List<String> permutations) {
         // If there are no more keys to process, the current permutation is complete
         if (keys.isEmpty()) {
             permutations.add(currentPermutation);
@@ -433,7 +405,7 @@ public class Ex1 {
         }
 
         // Get the next key
-        char key = keys.get(0);
+        String key = keys.get(0);
 
         // Get the list of characters associated with the key
         List<String> characters = map.get(key);
@@ -457,16 +429,13 @@ public class Ex1 {
      * @param  facCol   factorsCollection
      * @return         (double) p
      */
-    private static double joint_distribution(String q, variablesCollection varCol, factorsCollection facCol) {
+    private static double basic_inference(String q, variablesCollection varCol, factorsCollection facCol) {
 
-        // clear no needed data from string
+        // ----- clear no needed data from string ------ //
         q = q.replace("P" , "");
         q = q.replace("(" , "");
         q = q.replace(")" , "");
         String[] q_evidence = q.split("\\|");
-        System.out.println("q_evidence= " + Arrays.toString(q_evidence)); // PRINT
-        System.out.println("q= " + q); //PRINT
-
         String query = q_evidence[0];
         String[] evidencess = new String[0];
         String evidence = "";
@@ -474,126 +443,107 @@ public class Ex1 {
             evidence = q_evidence[1];
             evidencess = evidence.split(",");
         }
-        // convert evidencess to List<String>
+        // --- convert evidencess to List<String> ---- //
         List<String> evidences = new ArrayList<>();
         for (String e : evidencess) {
             evidences.add(e.trim());
         }
 
-        System.out.println("evidences= " + Arrays.toString(evidencess)); //PRINT
-        System.out.println("q= " + query); //PRINT
-
-        String var = query.split("=")[0];
-        String boolOfVar = query.split("=")[1];
-
-
+        // -------------------- HASHMAP COLLECTION --------------------------- //
         HashMap<String, HashMap<String, Double>> collection = coll2HashMap(varCol);
 
-        Double ppp = collection.get("B").get("B=T ");
-
+        // ---------- HIDDEN & NOT HIDDEN ---------- //
         List<String> notHiddenVars = new ArrayList<>();
         List<String> hiddenVars = new ArrayList<>();
-        notHiddenVars.add(var);
-
-        String temp = evidence.replace("=" , "");
-        temp = temp.replace("," , "");
-        temp = temp.replace("T" , "");
-        temp = temp.replace("F" , "");
-
-        System.out.println("temp: "+temp);
-
-        for(int i = 0; i < temp.length(); i++){
-            String str = "" + temp.charAt(i);
-            notHiddenVars.add(str);
+        String justVarOfQuery = query.split("=")[0];
+        notHiddenVars.add(justVarOfQuery);
+        String []splitedTemp1 = evidence.split(",");
+        for(int i = 0; i < splitedTemp1.length; i++) {
+            String []splittted = splitedTemp1[i].split("=");
+            notHiddenVars.add(splittted[0]);
         }
-        System.out.println("notHiddenVars: "+notHiddenVars);
         for(String key : collection.keySet()){
             if(!notHiddenVars.contains(key)){
                 hiddenVars.add(key);
             }
+        }// ------- END: HIDDEN & NOT HIDDEN ------- //
+
+        // ------ definition of all temp vars for joint joint_distribution algo -------- //
+        String tempQuery = "";
+        for(int i = 0; i< query.length(); i++){
+            tempQuery += ""+query.charAt(i);
         }
-        System.out.println("hiddenVars: "+hiddenVars);
+        List<String> allVars = new ArrayList<>(collection.keySet()); //List of all vars: A B E J M
 
-        System.out.println("childes of A: " + varCol.getVariable("A").getChildes());
+        // ----- Generating all combinations of |True/False or V1,V2,V3| x |hidden vars| in List ------- //
+        HashMap<String, List<String>> map = new HashMap<>();
+        for(String h : hiddenVars){
+            List <String> outcomesOfH = varCol.getVariable(h).getOutcome();
+            List<String> full = new ArrayList<>();
+            for (String l : outcomesOfH){
+                l = h + "=" + l+ " ";
+                full.add(l);
+            }
+            map.put(h, full);
+        }
+        List<String> tempPermutations = getPermutations(map);
+        List<List<String>> permutationsOfHiddenVars = new ArrayList<>();
+        for(int i = 0; i < tempPermutations.size(); i++){
+            String[] one = tempPermutations.get(i).split(" ");
+            permutationsOfHiddenVars.add(Arrays.asList(one));
+        }
 
-        System.out.println("getGiven of B: " + varCol.getVariable("B").getGiven());
+        // --- take only evidence without its outcome and put it to list --- //
+        List<String> onlyEvidences = new ArrayList<>();
+        for (String item : evidences) {
+            String[] splitted = item.split("=");
+            onlyEvidences.add(splitted[0]);
+        }
 
-        System.out.println("getOutcome of A: " + varCol.getVariable("A").getOutcome());
+        List<String> TempHiddenVars = new ArrayList<>(hiddenVars.size());  // -> Temple list of hidden vars
+        double ans = 0.0;  double ansV1 = 0.0; double ansV2 = 0.0; double ansV3 = 0.0;
+        int sizeOfVarOutcome = varCol.getVariable(justVarOfQuery).getOutcome().size();
+        boolean isTernary = sizeOfVarOutcome>2;
 
         // P(B=T, J=T, M=T, A=T, E=T) + P(B=T, J=T, M=T, A=F, E=T) + P(B=T, J=T, M=T, A=T, E=F) + P(B=T, J=T, M=T, A=F, E=F) +
         // P(B=F, J=T, M=T, A=T, E=T) + P(B=F, J=T, M=T, A=F, E=T) + P(B=F, J=T, M=T, A=T, E=F) + P(B=F, J=T, M=T, A=F, E=F) =
         // P(B=T) * P(J=T|A=T) * P(M=T|A=T) * P(A=T|B=T,E=T) + P(B=T) * P(J=T|A=F) * P(M=T|A=F) * P(A=F|B=T,E=T)...
 
-        // all temp vars for joint joint_distribution algo:
-        String tempQuery = query;
-        String justVarOfQuery = query.replace("=", ""); // delete =
-        justVarOfQuery = justVarOfQuery.replace("T", ""); // delete T
-        justVarOfQuery = justVarOfQuery.replace("F", ""); // delete F
 
-        //List of all vars
-        List<String> allVars = new ArrayList<>(collection.keySet()); // A B E J M
-        int indexVar = 0;
-
-        // All combinations of True/False x |hidden vars| in List
-        List<List<String>> listCombination = allCombination(hiddenVars.size());
-        // Add h1=v1...
-        HashMap<Character, List<String>> map = new HashMap<>();
-        for(String h : hiddenVars){
-            List <String> outcomesOfH = varCol.getVariable(h).getOutcome();
-            List<String> full = new ArrayList<>();
-            for (String l : outcomesOfH){
-                l = h + "=" + l;
-                full.add(l);
-            }
-            map.put(h.charAt(0), full);
-        }
-        List<String> permutations = getPermutations(map);
-        System.out.println("permutations: "+ permutations);
-
-
-        // Temple list of hidden vars
-        List<String> TempHiddenVars = new ArrayList<>(hiddenVars.size());
-        // Deep copy
-        TempHiddenVars.addAll(hiddenVars);
-        // probability
-        Double probOfQ;
-
-        // take only first character from evidences and put it to list
-        List<String> onlyEvidences = new ArrayList<>();
-        for (String item : evidences) {
-            onlyEvidences.add("" + item.charAt(0));
-        }
-
-
-
-
-
-        // CALCULATING P(B=T|J,M) and P(B=F|J,M)
-
-        double ans = 0.0;
-        double ansV1 = 0.0;
-        double ansV2 = 0.0;
-        double ansV3 = 0.0;
-        int sizeOfVarOutcome = varCol.getVariable(justVarOfQuery).getOutcome().size();
-        boolean isTernary = sizeOfVarOutcome>2;
-
-
+        // ------------------------------ basic_inference ALGORITHM ----------------------------------- //
         for (int i = 0; i < sizeOfVarOutcome; i++){ // for B=V1 and B=V2 (and B=V3)
-            for (int j = 0; j < Math.pow(2, hiddenVars.size()); j++){ // size of 2^hidden vars (for all options of hidden vars)
+            System.out.println("tempQuery:"+tempQuery);
+            for (int j = 0; j < permutationsOfHiddenVars.size(); j++){ // size of (all options of hidden vars)
                 // query = "B=T", evidences = ["J=T", "M=T"], hiddenVars = ["A", "E"]
 
-                // loop of all combinations of True/False x |hidden vars|
-                for (int index = 0; index < hiddenVars.size(); index++){
-                    TempHiddenVars.set(index, hiddenVars.get(index)+"="+listCombination.get(j).get(index));
-                } // TempHiddenVars: ["A=F", "E=F"]
+                // hiddenPermutations: [[A=T, E=T], [A=T, E=F], [A=F, E=T], [A=F, E=F]]
+                TempHiddenVars = permutationsOfHiddenVars.get(j);
+                System.out.println("Permutaion"+j+": "+TempHiddenVars); //DELETE THIS
 
                 double mult = 1.0;
                 for (String currentVar : allVars) { // want to calculate: P(B=T) * P(J=T|A=T) * P(M=T|A=T) * P(A=T|B=T,E=T)
-                    //String theRequest = findRequestTernary(varCol, currentVar, tempQuery, onlyEvidences ,evidences , hiddenVars, TempHiddenVars);
-                    //mult*=collection.get(currentVar).get(theRequest);
-                    int rightIndex = findIndex(varCol);
-                    mult*=varCol.getVariable(currentVar).getFactor().getRows().get(rightIndex).getP();
+                    String theRequest = findRequestTernary(varCol, currentVar, tempQuery, onlyEvidences ,evidences , hiddenVars, TempHiddenVars);
+
+                    try{
+                        double num = collection.get(currentVar).get(theRequest);
+                    }catch (Exception e){
+
+                        System.out.println("currentVar: "+currentVar + " theRequest: " + theRequest);
+                        // print the collection
+                        for (String key : collection.keySet()){
+                            System.out.print(key + " [");
+                            for (String key2 : collection.get(key).keySet()){
+                                System.out.print("["+"key: {" +key2+"}" + " value: " + collection.get(key).get(key2)+"] ");
+                            }
+                            System.out.println("]");
+                        }
+                        System.out.println(e);
+                        //theRequest = findRequestTernary(varCol, currentVar, tempQuery, onlyEvidences ,evidences , hiddenVars, TempHiddenVars);
+                    }
+                    System.out.print("theRequest: "+theRequest + " "); //DELETE THIS
+                    mult*=collection.get(currentVar).get(theRequest);
                     multiply(); // multiply*
+                    System.out.println("mult: "+collection.get(currentVar).get(theRequest)); //DELETE THIS
                 }
                 ans+=mult; plus(); // plus++
                 System.out.println("ans: " + ans);
@@ -602,60 +552,124 @@ public class Ex1 {
             }//end inside for
             plus--;
 
-            if (i==0) {//first
-                ansV1=ans;
-                ans = 0.0;
+            // ------- Change the contents of the variable -------- //
+            String[] splitedTempQuery = tempQuery.split("=");
+            if (i==0 || i==1 || i==2) {//first, second, (third)
+                if (i == 0){
+                    ansV1=ans;
+                    ans = 0.0;
+                }
+                else if (i == 1){
+                    ansV2=ans;
+                }
+                else {
+                    ansV3=ans;
+                }
                 // Change the contents of the variable
-                if (tempQuery.charAt(2) == 'T'){//binary
+                if (splitedTempQuery[1].equals("T")){
                     tempQuery = tempQuery.replace('T', 'F');
                 }
-                else {//ternary
-                    tempQuery = tempQuery.replace('1', '2');
+                else if (splitedTempQuery[1].equals("F")){
+                    tempQuery = tempQuery.replace('F', 'T');
                 }
-            }
-            else if (i == 1){//second
-                ansV2=ans;
-                ans = 0.0;
-                // Change the contents of the variable
-                if (tempQuery.charAt(2) == 'F'){//binary
-                    tempQuery = tempQuery.replace('T', 'F');
+                else if(splitedTempQuery[1].equals("v1")){// change v1 to v2
+                    splitedTempQuery[1] = "v2";
+                    String newString = "";
+                    for(int idx = 0; idx < splitedTempQuery.length; idx++){
+                        newString+=splitedTempQuery[idx]+"=";
+                    }
+                    newString = newString.substring(0, newString.length()-1);
+                    tempQuery = newString;
                 }
-                else {//ternary
-                    tempQuery = tempQuery.replace('2', '3');
+                else if (splitedTempQuery[1].equals("v2")){
+                    splitedTempQuery[1] = "v3";
+                    String newString = "";
+                    for(int idx = 0; idx < splitedTempQuery.length; idx++){
+                        newString+=splitedTempQuery[idx]+"=";
+                    }
+                    newString = newString.substring(0, newString.length()-1);
+                    tempQuery = newString;
                 }
-            }
-            else {//i==2
-                ansV3=ans;
-                ans = 0.0;
+                else if (splitedTempQuery[1].equals("v3")){
+                    splitedTempQuery[1] = "v1";
+                    String newString = "";
+                    for(int idx = 0; idx < splitedTempQuery.length; idx++){
+                        newString+=splitedTempQuery[idx]+"=";
+                    }
+                    newString = newString.substring(0, newString.length()-1);
+                    tempQuery = newString;
+                }
+
             }
 
         }//end outside for
 
-        System.out.println("ansV1: " + ansV1);
-        System.out.println("ansV2: " + ansV2);
-        System.out.println("ansV3: " + ansV3);
+//        System.out.println("ansV1: " + ansV1);
+//        System.out.println("ansV2: " + ansV2);
+//        System.out.println("ansV3: " + ansV3);
 
-        ans = 1/(ansV1+ansV2+ansV3); plus(); plus();
+        // -------- NORMALIZATION --------- //
+        ans = 1/(ansV1+ansV2+ansV3); plus();
         ans = ans*ansV1;
+        if(ansV3 != 0.0){plus();}
 
 
-//        ans = 1/(ansT+ansF); plus();
-//        ans=ans*ansT;
+        for (String key : collection.keySet()){
+            System.out.print(key + " [");
+            for (String key2 : collection.get(key).keySet()){
+                System.out.print("["+"key: {" +key2+"}" + " value: " + collection.get(key).get(key2)+"] ");
+            }
+            System.out.println("]");
+        }
 
-        System.out.println("ans: " + ans);
         return ans;
+    }
 
+    private static String returnQuery(String str, variablesCollection varCol){
+        // clear no needed data from string
+        String q = "";
+        for (int i = 0; i < str.length(); i++){q+=""+str.charAt(i);}
+        q = q.replace("P" , "");
+        q = q.replace("(" , "");
+        q = q.replace(")" , "");
+        String[] q_evidence = q.split("\\|");
 
-
-
-
-
-
-
-        //return 0;
+        String query = q_evidence[0];
+        String[] evidencess = new String[0];
+        String evidence = "";
+        if (q_evidence.length>1) {
+            evidence = q_evidence[1];
+            evidencess = evidence.split(",");
+        }
+        String var = query.split("=")[0];
+        String boolOfVar = query.split("=")[1];
+        HashMap<String, HashMap<String, Double>> collection = coll2HashMap(varCol);
+        List<String> notHiddenVars = new ArrayList<>();
+        notHiddenVars.add(var);
+        String temp = evidence.replace("=" , "");
+        temp = temp.replace("," , "");
+        temp = temp.replace("T" , "");
+        temp = temp.replace("F" , "");
+        for(int i = 0; i < temp.length(); i++){
+            String str1 = "" + temp.charAt(i);
+            notHiddenVars.add(str1);
+        }
+        String stringHidden = "";
+        for(String key : collection.keySet()){
+            if(!notHiddenVars.contains(key)){
+                stringHidden+=key+" ";
+            }
+        }
+        stringHidden=stringHidden.substring(0, stringHidden.length()-1);
+        stringHidden = sortListt(stringHidden);
+        stringHidden= stringHidden.replace(" ","-");
+        return str + " " + stringHidden;
     }
 
     private static double eliminate_join(String s, variablesCollection varCol, factorsCollection facCol) {
+        s = returnQuery(s, varCol);
+
+
         // clean data so we could work with
         String[] split_q_hidden = s.split(" ");
         String q = split_q_hidden[0];
@@ -676,13 +690,12 @@ public class Ex1 {
         }
         String ques = query.split("=")[0];
         String val = query.split("=")[1];
-
         // reduce non parents
         String[] evidences1 = new String[0];
         if (q_evidence.length>1){
             evidences1 = new String[evidences.length];
             for(int i=0 ; i<evidences.length ; i++) {
-                evidences1[i] = evidences[i].split("=")[0];
+                evidences1[i] = evidences[i].split("=")[0];;
             }
         }
         List<String> parents = relevantParentsNames(ques , evidences1 , varCol , facCol);
@@ -721,9 +734,6 @@ public class Ex1 {
 
         boolean join = false;
         if (split_q_hidden.length>1){
-
-            //hidden = "A-E"; // ADDED
-
             String[] hiddenOrder = hidden.split("-");
             // for each hidden, find all the factors that contain hidden
             for (int i=0 ; i<hiddenOrder.length ; i++){
@@ -775,7 +785,146 @@ public class Ex1 {
             moreThanOne = true;
         }
         if (moreThanOne){
-            factor = eliminate(facCol.getFactor(0),"pppppppppppppp");
+            factor = eliminate(facCol.getFactor(0),"hidden");
+        }
+        // normalization of query
+        if (join){
+            double sum = factor.getRows().get(0).getP();
+            for (int i=1 ; i<factor.getRows().size() ; i++){
+                sum += factor.getRows().get(i).getP();
+                plus();
+            }
+            for (int i=0 ; i<factor.getRows().size() ; i++){
+                factor.getRows().get(i).setP(factor.getRows().get(i).getP() / sum);
+            }
+        }
+
+        // find the answer in the last factor and return it
+        for (int j=0 ; j<factor.getRows().size() ; j++){
+            if (factor.getRows().get(j).getCases().get(ques).equals(val)){
+                return factor.getRows().get(j).getP();
+            }
+        }
+        return 0;
+    }
+    private static double eliminate_join_heuristic_order(String s, variablesCollection varCol, factorsCollection facCol){
+        s = returnQuery(s, varCol);
+        // clean data so we could work with
+        String[] split_q_hidden = s.split(" ");
+        String q = split_q_hidden[0];
+        String hidden = "";
+        if (split_q_hidden.length>1){
+            hidden = split_q_hidden[1];
+        }
+        q = q.replace("P" , "");
+        q = q.replace("(" , "");
+        q = q.replace(")" , "");
+        String[] q_evidence = q.split("\\|");
+        String query = q_evidence[0];
+        String[] evidences = new String[0];
+        String evidence = "";
+        if (q_evidence.length>1){
+            evidence = q_evidence[1];
+            evidences = evidence.split(",");
+        }
+        String ques = query.split("=")[0];
+        String val = query.split("=")[1];
+        // reduce non parents
+        String[] evidences1 = new String[0];
+        if (q_evidence.length>1){
+            evidences1 = new String[evidences.length];
+            for(int i=0 ; i<evidences.length ; i++) {
+                evidences1[i] = evidences[i].split("=")[0];;
+            }
+        }
+        List<String> parents = relevantParentsNames(ques , evidences1 , varCol , facCol);
+        for (String key : varCol.getCollection().keySet()) {
+            for(int i=0 ; i<varCol.getVariable(key).getFactor().getParameters().size() ; i++){
+                if (!parents.contains(key)){
+                    facCol.removeFactorContains(key);
+                }
+            }
+        }
+
+        // reduce independent
+        for (String key : varCol.getCollection().keySet()) {
+            String checkBayesBall = key+"-"+ques+"|"+evidence;
+            if (!evidence.contains(key) && bayesBall(checkBayesBall,varCol)){
+                facCol.removeFactorContains(key);
+            }
+        }
+        // reduce evidence
+        for(int i=0 ; i<evidences.length ; i++){
+            String k = evidences[i].split("=")[0];
+            String v = evidences[i].split("=")[1];
+            for (int j=0 ; j<facCol.getAllFactors().size() ; j++){
+                if (facCol.getAllFactors().get(j).contains(k)){
+                    // create a new factor without the hidden column that not from the right value
+                    Factor a = new Factor(facCol.getAllFactors().get(j).getParameters() , facCol.getAllFactors().get(j).getRows() , k , v);
+                    facCol.getAllFactors().remove(j);
+                    facCol.addToCollectionIndex(a,j);
+                    if (a.getRows().size()==1){
+                        facCol.getAllFactors().remove(j);
+                        j--;
+                    }
+                }
+            }
+        }
+
+        boolean join = false;
+        if (split_q_hidden.length>1){
+            String[] hiddenOrder = hidden.split("-");
+            // for each hidden, find all the factors that contain hidden
+            for (int i=0 ; i<hiddenOrder.length ; i++){
+                factorsCollection allHiddenFactors = new factorsCollection();
+                for (int j=0 ; j<facCol.getAllFactors().size() ; j++){
+                    if (facCol.getFactor(j).contains(hiddenOrder[i])){
+                        allHiddenFactors.addToCollection(facCol.getFactor(j));
+                        facCol.getAllFactors().remove(j);
+                        j--;
+                    }
+                }
+                // if there's only one, eliminate and finish
+                if (allHiddenFactors.getAllFactors().size()==1){
+                    Factor factor = eliminate(allHiddenFactors.getAllFactors().get(0),hiddenOrder[i]);
+                    allHiddenFactors.getAllFactors().remove(0);
+                    if (factor.getParameters().size()>0){
+                        facCol.addToCollection(factor);
+                    }
+                }
+                // if there are more than one factor, sort by size, join all, and eliminate
+                sortFactors(allHiddenFactors.getAllFactors());
+                boolean sizeBiggerThanOne = false;
+                while (allHiddenFactors.getAllFactors().size() > 1){
+                    Factor factor = join(allHiddenFactors.getFactor(0) , allHiddenFactors.getFactor(1));
+                    join = true;
+                    allHiddenFactors.getAllFactors().remove(0);
+                    allHiddenFactors.getAllFactors().remove(0);
+                    allHiddenFactors.addToCollectionIndex(factor,0);
+                    sizeBiggerThanOne = true;
+                }
+                if (sizeBiggerThanOne){
+                    Factor factor = eliminate(allHiddenFactors.getFactor(0),hiddenOrder[i]);
+                    if (factor.getRows().size()>1){
+                        facCol.addToCollection(factor);
+                    }
+                }
+            }
+        }
+
+        // only relevant factors of query
+        sortFactors(facCol.getAllFactors());
+        Factor factor = facCol.getFactor(0);
+        boolean moreThanOne = false;
+        while (facCol.getAllFactors().size() > 1) {
+            factor = join(facCol.getFactor(0), facCol.getFactor(1));
+            facCol.getAllFactors().remove(0);
+            facCol.getAllFactors().remove(0);
+            facCol.addToCollectionIndex(factor,0);
+            moreThanOne = true;
+        }
+        if (moreThanOne){
+            factor = eliminate(facCol.getFactor(0),"hidden");
         }
         // normalization of query
         if (join){
